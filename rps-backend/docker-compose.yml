@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  db:
+    container_name: rps-db
+    image: postgres
+    env_file:
+      - .env
+    volumes:
+      - rps-data:/var/lib/postgresql/data/
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5432:5432
+  pgadmin:
+    container_name: rps_pgadmin4
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: 1234
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+
+volumes:
+  rps-data:
