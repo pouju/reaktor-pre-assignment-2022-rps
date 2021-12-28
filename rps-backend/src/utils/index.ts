@@ -1,5 +1,5 @@
 import Ajv, { JSONSchemaType } from 'ajv';
-import { Page, DbPage, GameResult, DbGameResult, Player, Played,} from './types';
+import { Page, DbPage, GameResult, DbGameResult, Player, Played,} from '../types';
 
 export const dbGameResultToGameResult = (gameResult: DbGameResult): GameResult => {
   return {
@@ -87,7 +87,7 @@ const validate = ajv.compile(pageResponseSchema);
 /**
  * 
  * @param page unkown axios response data wanna be Page.
- * @returns page is db format or undefined in case of incorrect data / validation errors.
+ * @returns page in db format or undefined in case of incorrect data / validation errors.
  */
 export const validatePageResponse = (page: unknown): DbPage | undefined => {
   if (validate(page)) {
@@ -96,44 +96,3 @@ export const validatePageResponse = (page: unknown): DbPage | undefined => {
   console.log('pageResponse validation errors: ', validate.errors);
   return undefined;
 };
-
-
-
-
-
-
-/* const insertCursor = (newCursor: string) => {
-  db.one('INSERT INTO cursors(cursor) VALUES($1) ON CONFLICT DO NOTHING RETURNING cursor', [newCursor])
-    .then(data => {
-        console.log(data.cursor);
-    })
-    .catch(error => {
-        console.log('ERROR:', error);
-    });
-};
-
-export const updateCursors = async () => {
-  const baseUrl = 'https://bad-api-assignment.reaktor.com';
-  let path: string | undefined = '/rps/history';
-  let counter = 0;
-
-  while (path) {
-    counter++;
-    const response = await axios
-      .get<Page>(`${baseUrl}${path}`);
-
-    const page: Page = response.data; //validatePageResponse(response.data);
-
-    if (page) {
-      path = page.cursor;
-      if (isString(path)) {
-        console.log(path);
-        insertCursor(path);
-      }
-    }
-    else throw new Error('Received incorrect data from Bad Api');
-  }
-
-  console.log(`finished with ${counter} cursors`);
-
-}; */

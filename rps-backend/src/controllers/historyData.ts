@@ -1,75 +1,24 @@
 import { Router } from 'express';
 import {
-  deleteAllCursors,
   getAllPlayers,
-  getCursors,
   getPlayerHistory,
   getPlayerPageCount,
-  getPlayerSummary,
-  syncBadApiAndDb
+  getPlayerSummary
 } from '../services/historyDataService';
 import { isString } from '../types';
 
 const historyDataRouter = Router();
 
-
-// FOR DEVELOPMENT ONLY
-historyDataRouter.get('/initdb', (_req, res) => {
-  syncBadApiAndDb()
-    .then((result) => res.send(result))
-    .catch((e) => res.send(e));
-
-  /* const baseUrl = 'https://bad-api-assignment.reaktor.com';
-  let path: string | undefined = '/rps/history';
-  let counter = 0;
-
-  while (path) {
-    const response = await axios
-      .get<Page>(`${baseUrl}${path}`);
-
-    const page: Page = response.data;
-
-    if (page) {
-      path = page.cursor;
-      const res = await savePage(page, counter);
-      if (res === undefined) {
-        // stop fetching
-        console.log('aborting');
-        path = undefined;
-      }
-    }
-
-    counter++;
-  }
-
-  console.log('read ', counter);
-  res.json(counter); */
-});
-
-// FOR DEVELOPMENT PURPOSES ONLY
-historyDataRouter.get('/deleteCursors', (_req, res) => {
-  deleteAllCursors()
-    .then(() => res.send('deleted'))
-    .catch((e) => {
-      console.log(e);
-      res.json({ error: 'Oops, something went wrong' });
-    });
-});
-
-historyDataRouter.get('/cursors', (_req, res) => {
-  getCursors()
-    .then((result) => res.json(result))
-    .catch((e) => {
-      console.log(e);
-      res.json({ error: 'Oops, something went wrong' });
-    });
-});
-
+/**
+ * Get player's history of played games
+ * Query param `player` is player's name
+ * Query param `page` is page number which results are retrieved
+ * 
+ * @returns json array containing history data or error message if error occured
+ */
 historyDataRouter.get('/', (req, res) => {
   const player = req.query.player;
   const pageNumber = Number(req.query.page);
-
-  console.log(req.query);
 
   if (isString(player) && !isNaN(pageNumber)) {
     const decodedPlayer = decodeURIComponent(player);
@@ -83,10 +32,15 @@ historyDataRouter.get('/', (req, res) => {
   }
   else {
     res.json({ error: 'Invalid query params'});
-  }
-  
+  } 
 });
 
+/**
+ * Get number of history pages for certain player
+ * Query param `player` defines player's name
+ * 
+ * @returns number of pages or error message is error occured
+ */
 historyDataRouter.get('/pagecount', (req, res) => {
   const player = req.query.player;
 
@@ -105,6 +59,11 @@ historyDataRouter.get('/pagecount', (req, res) => {
   }
 });
 
+/**
+ * Get all distinct player names from db
+ * @returns json array of distinct player names whose result are stored to db
+ *          or error message in case of error
+ */
 historyDataRouter.get('/players', (_req, res) => {
   getAllPlayers()
     .then((result) => res.json(result))
@@ -114,6 +73,17 @@ historyDataRouter.get('/players', (_req, res) => {
     });
 });
 
+/**
+ * Get player's summary info
+ * url param `player` is player's name
+ * @returns json object containing:
+ *          `winRatio: float`
+ *          `totalGames: int`
+ *          `mostPlayedHand: Played`
+ *          if one info value can't be calculated undefined is returned for that key
+ *          or error message in case of error
+ *          
+ */
 historyDataRouter.get('/summary/:player', (req, res) => {
   const player = req.params.player;
   getPlayerSummary(player)
@@ -124,7 +94,5 @@ historyDataRouter.get('/summary/:player', (req, res) => {
     });
     
 });
-
-
 
 export default historyDataRouter;
