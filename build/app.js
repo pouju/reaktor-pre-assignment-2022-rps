@@ -7,6 +7,7 @@ const config_1 = __importDefault(require("./utils/config"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const http_1 = __importDefault(require("http"));
 const historyDataService_1 = require("./services/historyDataService");
 const historyData_1 = __importDefault(require("./controllers/historyData"));
 const app = (0, express_1.default)();
@@ -40,6 +41,13 @@ setInterval(() => {
     }
     else {
         console.log('lock is set');
+    }
+    // ping heroku app to keep it awake
+    try {
+        http_1.default.get('http://rps-results.herokuapp.com');
+    }
+    catch (e) {
+        console.log('Pinging application failed', e);
     }
 }, 600000);
 app.get('/ping', (_req, res) => {

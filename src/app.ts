@@ -2,6 +2,7 @@ import config from './utils/config';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import http from 'http';
 import { syncBadApiAndDb } from './services/historyDataService';
 import historyDataRouter from './controllers/historyData';
 
@@ -40,6 +41,14 @@ setInterval(() => {
   else {
     console.log('lock is set');
   }
+
+  // ping heroku app to keep it awake
+  try {
+    http.get('http://rps-results.herokuapp.com');
+  } catch (e) {
+    console.log('Pinging application failed', e);
+  }
+
 }, 600000);
 
 app.get('/ping', (_req, res) => {
