@@ -55,7 +55,6 @@ const RpsLive = () => {
             setGameResults(oldGameResults.concat(validated));
           }
         }
-        
       }
     }
   }

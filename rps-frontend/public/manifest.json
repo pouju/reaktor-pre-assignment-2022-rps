@@ -1,0 +1,9 @@
+{
+  "short_name": "RPS",
+  "name": "Rock-Paper-Scissors - Results",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

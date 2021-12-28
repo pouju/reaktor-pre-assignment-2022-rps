@@ -8,7 +8,7 @@ import {
   TableRow,
   Paper
 } from '@mui/material';
-import { makeStyles } from '@mui/styles';
+import { ClassNameMap, makeStyles } from '@mui/styles';
 import { GameResult } from '../types';
 import { getWinner } from '../utils';
 import { getPlayedEmoji, trophy, question } from '../utils/emojis';
@@ -35,8 +35,7 @@ const useStyles = makeStyles(() => ({
   }
 }));
 
-const formGameCell = (gameResult: GameResult) => {
-  const classes = useStyles();
+const formGameCell = (gameResult: GameResult, classes: ClassNameMap<"root" | "gameCell" | "gameCellNameL" | "gameCellNameR" | "gameCellVs">) => {
   
   return (
     <div className={classes.gameCell}>
@@ -75,6 +74,7 @@ const formTimeCell = (gameResult: GameResult) => {
 }
 
 const GameResultTable = ({ gameResults }: { gameResults: GameResult[] }) => {
+  const classes = useStyles();
 
   if (gameResults.length === 0) {
     return <></>
@@ -97,7 +97,7 @@ const GameResultTable = ({ gameResults }: { gameResults: GameResult[] }) => {
               <TableRow key={row.gameId}>
                 <TableCell>{row.gameId}</TableCell>
                 <TableCell>{formTimeCell(row)}</TableCell>
-                <TableCell>{formGameCell(row)}</TableCell>
+                <TableCell>{formGameCell(row, classes)}</TableCell>
                 <TableCell>{formWinnerCell(row)}</TableCell>
               </TableRow>
             ))

@@ -33,16 +33,16 @@ export interface Page {
   data: GameResult[]
 }
 
+export interface PlayerSummaryData {
+  winRatio: number,
+  totalGames: number,
+  mostPlayedHand: Played,
+}
+
 export const isString = (text: unknown): text is string => {
   return typeof text === 'string' || text instanceof String;
 };
 
 export const isStringArray = (array: unknown): array is string[] => {
   return Array.isArray(array) && array !== null && array.every(isString);
-}
-
-export interface PlayerSummaryData {
-  winRatio: number,
-  totalGames: number,
-  mostPlayedHand: Played,
 }

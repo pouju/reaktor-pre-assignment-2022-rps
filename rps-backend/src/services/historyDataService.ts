@@ -1,30 +1,25 @@
-import { DbGameResult, CursorObject, DbPage, isCursorObjectArray } from '../types';
-import { db, pgp } from '../db/config';
 import axios from 'axios';
-import { dbGameResultToGameResult, validatePageResponse } from '../utils';
-import { ITask } from 'pg-promise';
-
-const cs = new pgp.helpers.ColumnSet<DbGameResult>(
-  ['gameid', 't', 'playeraname', 'playeraplayed', 'playerbname', 'playerbplayed'],
-  { table: 'gameresults' }
-  );
-
-const csCursors = new pgp.helpers.ColumnSet<CursorObject>(
-  ['cursor'],
-  { table: 'cursors' }
-);
-
-const onConflict = ' ON CONFLICT DO NOTHING';
+import { GameResult, CursorObject, Page, isStringArray, Played } from '../types';
+import { validateMostPlayedHandResponse, validatePageResponse } from '../utils/';
+import CursorModel from '../models/Cursor';
+import GameResultModel from '../models/GameResult';
+import config from '../utils/config';
 
 /**
- * 
- * @param data array of game results in db format
+ * Saves new game results to db or updates in case of game result already existed: i.e. 'upsert'
+ * @param data array of game results
  * @returns Promise including true in success and undefined in case of error
+ * @see storePage
  */
-const storeGameResults = async (data: DbGameResult[]) => {
-  const insertQuery = pgp.helpers.insert(data, cs) + onConflict;
+const storeGameResults = async (data: GameResult[]) => {
   try {
-    await db.none(insertQuery);
+    await GameResultModel.bulkWrite(data.map((result) => ({
+      updateOne: {
+        filter: { gameId: result.gameId },
+        update: result,
+        upsert: true,
+      }
+    })));
     return true;
   } catch (e) {
     console.log(e);
@@ -34,12 +29,13 @@ const storeGameResults = async (data: DbGameResult[]) => {
 
 /**
  * 
- * @param page page in db format
- * @returns Promise including `cursor` string if page was saved and cursor should be saved to indicate that page is saved.
+ * @param page One validated page get from Bad Api
+ * @returns Promise including `cursor` string if page (game results) was saved and cursor should be saved to indicate that page is saved.
  *          Promise including `false` if page was already saved and thus also all next pages are saved so stop storing next pages
  *          Promise including `undefined` in case of error.
+ * @see syncBadApiAndDb
  */
- const storePage = async (page: DbPage) => {
+ const storePage = async (page: Page) => {
    if (!page.cursor || await pageIsSaved(page.cursor)) {
      return false;
    } else {
@@ -50,73 +46,43 @@ const storeGameResults = async (data: DbGameResult[]) => {
      return res;
    }
 };
-/* const storePage = async (page: DbPage, saveCursor: number) => {
-  // always save first page but do not save cursor yet
-  if (saveCursor === 0) {
-    return await storeGameResults(page.data);
-  }
-
-  // "full" pages i.e. from second page -->
-  if (page.cursor && await storeCursor(page.cursor)) {
-    return await storeGameResults(page.data);
-  }
-
-  return false;
-}; */
 
 /**
  * 
  * @param cursor `cursor` string of page (this means cursor to next page, i.e. one use next page cursor to indicate whether current page is saved or not)
  * @returns Boolean promise indicating whether page is saved or not
+ * @see storePage
  */
 const pageIsSaved = async (cursor: string) => {
   try {
-      const res = await db.oneOrNone<CursorObject>('SELECT * FROM cursors WHERE cursor = $1', cursor);
+      const res = await CursorModel.exists({ cursor: cursor});
     if (res) {
       return true;
     } else return false;
   } catch (e) {
     console.log(e);
-    return false; // perform saving
+    return false; // perform saving/upsert to be sure that game results are saved
   }
 };
 
 /**
- *  
+ * Stores cursors to db to indicate that these page where that cursor is present is saved
  * @param cursor `CursorObject array` containing cursors which needs to be saved
  * @returns Promise including true in case of success and undefined in case of error.
+ * @see syncBadApiAndDb
  */
 const storeCursors = async (cursors: CursorObject[]) => {
-  const insertQuery = pgp.helpers.insert(cursors, csCursors) + onConflict;
   try {
-    await db.none(insertQuery);
+    await CursorModel.insertMany(cursors);
     return true;
   } catch (e) {
     console.log(e);
     return undefined;
   }
-
-  /* try {
-    return await db.task(async (t) => {
-      const cursorRes = await t.oneOrNone<CursorObject>('SELECT * FROM cursors WHERE cursor = $1', cursor);
-      console.log(cursorRes);
-      if (!cursorRes) {
-        console.log('storing cursor: ', cursor);
-        await t.none('INSERT INTO cursors(cursor) VALUES($1)', cursor);
-        return true;
-      }
-      return false;
-    });
-  
-  } catch (e) {
-    console.log(e);
-    return undefined;
-  } */
-  
 };
 
 /**
- * Is used to recursively synch `Bad Api` json pages with Postgres database
+ * Is used to recursively synch `Bad Api` json pages with MongoDB database
  * Pages are saved until cursors to next page tells that this page is already saved
  * Cursors of saved page are stored to array and finally if no error occured, all cursors are saved
  * This way one ensure that all pages will be in sync with api and no 'page holes' are present due to error
@@ -136,18 +102,12 @@ export const syncBadApiAndDb =async () => {
 
     const page = validatePageResponse(response.data);
 
-    /* if (counter === 0) {
-      const tmp = page.data.map(storeGameResult);
-      await Promise.all(tmp);
-      console.log('first page saved');
-    } */
-
     if (page) {
       path = page.cursor;
       const res = await storePage(page);
       if (res === false) {
         // stop fetching
-        console.log('aborting');
+        console.log('aborting sync');
         path = undefined;
         break;
       } else if (res === undefined) {
@@ -156,6 +116,8 @@ export const syncBadApiAndDb =async () => {
         result = 'sync failed due to error';
         break;
       } else if (counter > 0 && page.cursor) {
+          // store cursor so it can be saved later on
+          // the first cursor is not stored
           cursors.push({ cursor: page.cursor });
       }
     }
@@ -170,239 +132,217 @@ export const syncBadApiAndDb =async () => {
   return result;
 };
 
-const pageSize = 50;
+/**
+ * Number of game results per page
+ */
+const pageSize = config.PAGE_SIZE;
 
-export const getPlayerHistory = (player: string, page: number) => {
+/**
+ * 
+ * @param player player's name
+ * @param page number of page to get history data, paging is starting from 0
+ * @returns Promise including array of game results or error message
+ * @see pageSize
+ */
+export const getPlayerHistory = async (player: string, page: number) => {
   const offset = pageSize * page;
-  return db.any<DbGameResult>(`
-    SELECT * FROM gameResults WHERE playeraname = $1 OR playerbname = $1
-    ORDER BY t DESC
-    LIMIT $2
-    OFFSET $3
-    `,
-    [player, pageSize, offset]
-  )
-    .then((result) => result.map(dbGameResultToGameResult))
-    .catch((e) => {
-      console.log(e);
-      return { error: 'Oops, something went wrong' };
-    });
-};
-
-export const getPlayerPageCount = (player: string) => {
-  return db.one<{ count: string}>('SELECT COUNT(*) FROM gameResults WHERE playeraname = $1 OR playerbname = $1', player)
-    .then((result) => Math.floor(Number(result.count) / pageSize))
-    .catch((e) => {
-      console.log(e);
-      return { error: 'Oops, something went wrong' };
-    });
-};
-
-export const getAllPlayers = () => {
-  return db.any<{ player: string }>(`
-    SELECT DISTINCT playerAname AS player FROM gameResults
-      UNION
-    SELECT DISTINCT playerBname AS player FROM gameResults;
-    `)
-    .then((result) => result.map((obj) => obj.player))
-    .catch((e) => {
-      console.log(e);
-      const res: string[] = [];
-      return res;
-    });
-};
-
-export const getCursors = () => {
-  return db.any('SELECT * FROM cursors')
-    .then((response) => {
-      if (isCursorObjectArray(response)) {
-        return response.map((obj) => obj.cursor);
-      }
-      else return undefined;
-    })
-    .catch((e) => {
-      console.log(e);
-      return undefined;
-    });
-};
-
-export const deleteAllCursors = () => {
-  return db.none('DELETE FROM cursors');
-};
-
-export const getPlayerSummary = (player: string) => {
-  return db.task(async (t) => {
-    const winRatioP = getWinratio(t, player);
-    const totalGamesP = getTotalMatchedPlayed(t, player);
-    const mostPlayedHandP = getMostPlayedHand(t, player);
-    return Promise.all([winRatioP, totalGamesP, mostPlayedHandP])
-      .then((values) => {
-        return {
-          winRatio: values[0],
-          totalGames: values[1],
-          mostPlayedHand: values[2]
-        };
-      })
-      .catch((e) => {
-        console.log(e);
-        return undefined;
-      });
-  });
-};
-
-const getMostPlayedHand = (t: ITask<Record<string, unknown>>, player: string) => {
-  return t.oneOrNone<{ played: string, count: number }>(`
-    SELECT A.played, A.playedcount + B.playedCount AS count
-    FROM
-    (
-      SELECT playeraplayed AS played, COUNT(*) AS playedcount FROM gameresults
-      WHERE playeraname = $1
-      GROUP BY playeraplayed
-      ORDER BY count(*) DESC
-    ) AS A,
-    (
-      SELECT playerbplayed AS played, COUNT(*) AS playedcount FROM gameresults
-      WHERE playerbname = $1
-      GROUP BY playerbplayed
-      ORDER BY count(*) DESC
-    ) AS B
-    WHERE A.played = B.played
-    ORDER BY count DESC
-    LIMIT 1
-  `, player)
-    .then((result) => result?.played)
-    .catch((e) => {
-      console.log(e);
-      return undefined;
-    });
-};
-
-
-const getTotalMatchedPlayed = (t: ITask<Record<string, unknown>>, player: string) => {
-  return t.oneOrNone<{ totalgames: number }>(`
-    SELECT CAST(COUNT(*) AS FLOAT) AS totalgames  FROM gameresults
-    WHERE playeraname = $1 or playerbname = $1
-  `, player)
-    .then((result) => result?.totalgames)
-    .catch((e) => {
-      console.log(e);
-      return undefined;
-    });
-};
-
-const getWinratio = async (t: ITask<Record<string, unknown>>, player: string) => {
-  return t.one<{ winratio: number }>(`
-    SELECT A.WINS / NULLIF(A.TOTALGAMES, 0) as winratio
-    FROM
-    (
-    SELECT
-      (
-        SELECT CAST(COUNT(*) AS FLOAT) AS WINS FROM (
-          SELECT * FROM (
-            SELECT * FROM gameresults
-            WHERE playeraname = $1
-          ) AS AGAMES
-          WHERE (playeraplayed = 'PAPER' AND playerbplayed = 'ROCK') OR (playeraplayed = 'ROCK' AND playerbplayed = 'SCISSORS') OR (playeraplayed = 'SCISSORS' AND playerbplayed = 'PAPER')
-      
-          UNION
-      
-          SELECT * FROM (
-            SELECT * FROM gameresults
-            WHERE playerbname = $1
-          ) AS BGAMES
-          WHERE (playerbplayed = 'PAPER' AND playeraplayed = 'ROCK') OR (playerbplayed = 'ROCK' AND playeraplayed = 'SCISSORS') OR (playerbplayed = 'SCISSORS' AND playeraplayed = 'PAPER')
-        ) AS WINNEDGAMES
-      ),
-      (
-        SELECT CAST(COUNT(*) AS FLOAT) AS TOTALGAMES  FROM gameresults
-        WHERE playeraname = $1 or playerbname = $1
-      )
-    ) AS A
-  `, player)
-    .then((result) => result.winratio)
-    .catch((e) => {
-      console.log(e);
-      return 0;
-    });
-};
-
-/* export const getPlayerWinRatio = (player: string) => {
-  return db.one<{ winratio: number }>(`
-    SELECT A.WINS / A.TOTALGAMES as winratio
-    FROM
-    (
-    SELECT
-      (
-        SELECT CAST(COUNT(*) AS FLOAT) AS WINS FROM (
-          SELECT * FROM (
-            SELECT * FROM gameresults
-            WHERE playeraname = $1
-          ) AS AGAMES
-          WHERE (playeraplayed = 'PAPER' AND playerbplayed = 'ROCK') OR (playeraplayed = 'ROCK' AND playerbplayed = 'SCISSORS') OR (playeraplayed = 'SCISSORS' AND playerbplayed = 'PAPER')
-      
-          UNION
-      
-          SELECT * FROM (
-            SELECT * FROM gameresults
-            WHERE playerbname = $1
-          ) AS BGAMES
-          WHERE (playerbplayed = 'PAPER' AND playeraplayed = 'ROCK') OR (playerbplayed = 'ROCK' AND playeraplayed = 'SCISSORS') OR (playerbplayed = 'SCISSORS' AND playeraplayed = 'PAPER')
-        ) AS WINNEDGAMES
-      ),
-      (
-        SELECT CAST(COUNT(*) AS FLOAT) AS TOTALGAMES  FROM gameresults
-        WHERE playeraname = $1 or playerbname = $1
-      )
-    ) AS A
-  `, player)
-    .then((result) => result.winratio)
-      .catch((e) => {
-        console.log(e);
-        return 0;
-      });
-}; */
-
-
-/* export const storePage = async (page: Page) => {
-  console.log('cursor: ', page.cursor);
-  if (page.cursor && await storeCursor(page.cursor)) {
-    console.log('storing page with cursor: ', page.cursor);
-    const res = page.data.map((gameRes) => storeGameResult(gameRes));
-
-    return await Promise.all(res)
-      .then((result) => !result.includes(false))
-      .catch((e) => {
-        console.log(e);
-        return false;
-      });
+  try {
+    const res = await GameResultModel.find(
+      { $or: [{ 'playerA.name': player }, { 'playerB.name': player }] },
+      {},
+      { sort: { t: -1 }, skip: offset, limit: pageSize }
+    );
+    return res.map(o => o.toJSON());
+  } catch (e) {
+    console.log(e);
+    return { error: 'Oops, something went wrong' };
   }
-  return undefined;
-}; */
+};
 
-/* export const storeGameResult = async (gameResult: GameResult) => {
-  const values = [
-    gameResult.gameId,
-    gameResult.t,
-    gameResult.playerA.name,
-    gameResult.playerA.played,
-    gameResult.playerB.name,
-    gameResult.playerB.played
-  ];
+/**
+ * 
+ * @param player player's name
+ * @returns Promise including number that indicates how many pages there exists for `player`
+ *          or error message in case of error
+ */
+export const getPlayerPageCount = async (player: string) => {
+  try {
+    const res = await GameResultModel.countDocuments({ $or: [{ 'playerA.name': player }, { 'playerB.name': player }] });
+    return Math.ceil(Number(res) / pageSize);
+  } catch (e) {
+    console.log(e);
+    return { error: 'Oops, something went wrong' };
+  }
+};
 
-  const res = db.task(async (t) => {
-    const gameRes = await t.oneOrNone<DbGameResult>('SELECT * FROM gameResults WHERE gameId = $1', gameResult.gameId);
-    if (!gameRes) {
-      console.log('storing gameresult: ', gameResult.gameId);
-      await t.none('INSERT INTO gameResults(gameId, t, playerAname, playerAplayed, playerBname, playerBplayed) VALUES($1, $2, $3, $4, $5, $6)', values);
+/**
+ * 
+ * @returns All distinct playernames in db
+ *          or error message in case of error
+ */
+export const getAllPlayers = async () => {
+  const errorRes = { error: 'Oops, something went wrong' };
+  try {
+    const anames = await GameResultModel.distinct('playerA.name').exec();
+    const bnames = await GameResultModel.distinct('playerB.name').exec();
 
+    if (isStringArray(anames) && isStringArray(bnames)) {
+      return [...new Set(anames.concat(bnames))];
     }
-  }).then((_events) => {
-      return true;
-    })  
-    .catch((e)=> {
-      console.log(e);
-      return false;
-    });
-  return res;
-}; */
+    return errorRes;
+  } catch (e) {
+    console.log(e);
+    return errorRes;
+  }
+};
 
+/**
+ * Wraps all summary info functions and returns result in combined object
+ * @param player player's name
+ * @returns `player`'s summary containing WinRatio, totalGames played and mostPlayedHand
+ * @see getMostPlayedHand
+ * @see getTotalMatchedPlayed
+ * @see getWinratio
+ */
+export const getPlayerSummary = async (player: string) => {
+  const hand = getMostPlayedHand(player);
+  const games = getTotalMatchedPlayed(player);
+  const ratio = getWinratio(player);
+  return {
+    winRatio: await ratio,
+    totalGames: await games,
+    mostPlayedHand: await hand
+  };
+};
+
+/**
+ * 
+ * @param player player's name
+ * @returns `player`'s most played hand or undefined in case of error
+ */
+const getMostPlayedHand = async (player: string) => {
+  
+  try {
+    const aplayed = await GameResultModel.aggregate([
+      {
+        $match: { 'playerA.name': player },
+      },
+      {
+        $group: {
+          _id: '$playerA.played',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    const bplayed = await GameResultModel.aggregate([
+      {
+        $match: { 'playerB.name': player },
+      },
+      {
+        $group: {
+          _id: '$playerB.played',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const [validatedA, validatedB] = [validateMostPlayedHandResponse(aplayed), validateMostPlayedHandResponse(bplayed)];
+
+    if (validatedA && validatedB) {
+      console.log(validatedA, validatedB);
+      const rockA = validatedA.find((el) => el._id === 'ROCK');
+      const rockB = validatedB.find((el) => el._id === 'ROCK');
+      const scissorsA = validatedA.find((el) => el._id === 'SCISSORS');
+      const scissorsB = validatedB.find((el) => el._id === 'SCISSORS');
+      const paperA = validatedA.find((el) => el._id === 'PAPER');
+      const paperB = validatedB.find((el) => el._id === 'PAPER');
+
+      const rock = rockA && rockB ? rockA.count + rockB.count : 0;
+      const scissors = scissorsA && scissorsB ? scissorsA.count + scissorsB.count : 0;
+      const paper = paperA && paperB ? paperA.count + paperB.count : 0;
+      console.log(rock, scissors, paper);
+      if (rock > scissors && rock > paper) return Played.Rock;
+      else if (scissors > rock && scissors > paper) return Played.Scissors;
+      else return Played.Paper;
+    }
+    
+    return undefined;
+
+  } catch (e) {
+    console.log(e);
+    return undefined;
+  }
+};
+
+/**
+ * 
+ * @param player player's name
+ * @returns number of player has played or undefined in case of error
+ */
+const getTotalMatchedPlayed = async (player: string) => {
+  try {
+    return await GameResultModel.countDocuments({ $or: [{ 'playerA.name': player }, { 'playerB.name': player }] });
+  } catch (e) {
+    console.log(e);
+    return undefined;
+  }
+};
+
+/**
+ * 
+ * @param player player's name
+ * @returns `player`'s win ratio or undefined if error occured
+ */
+const getWinratio = async (player: string) => {
+  const totalGames = await getTotalMatchedPlayed(player);
+
+  try {
+    const wins = await GameResultModel.countDocuments(
+      { 
+        $or: [
+          {
+            $and: [
+              { 'playerA.name': player },
+              { $or: [
+                  { 
+                    $and: [ {'playerA.played': 'PAPER' }, {'playerB.played': 'ROCK' } ] 
+                  }, 
+                  { 
+                    $and: [ {'playerA.played': 'ROCK' }, {'playerB.played': 'SCISSORS' } ]
+                  },
+                  { 
+                    $and: [ {'playerA.played': 'SCISSORS' }, {'playerB.played': 'PAPER' } ]
+                  }
+                ]
+              },
+            ]
+          },
+          {
+            $and: [
+              { 'playerB.name': player },
+              { $or: [
+                  { 
+                    $and: [ {'playerB.played': 'PAPER' }, {'playerA.played': 'ROCK' } ] 
+                  }, 
+                  { 
+                    $and: [ {'playerB.played': 'ROCK' }, {'playerA.played': 'SCISSORS' } ]
+                  },
+                  { 
+                    $and: [ {'playerB.played': 'SCISSORS' }, {'playerA.played': 'PAPER' } ]
+                  }
+                ]
+              },
+            ]
+          }
+        ]
+      });
+
+      if (totalGames) {
+        return wins * 1.0 / totalGames;
+      }
+      return undefined;
+  } catch (e) {
+    console.log(e);
+    return undefined;
+  }
+};
