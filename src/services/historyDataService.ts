@@ -249,7 +249,6 @@ const getMostPlayedHand = async (player: string) => {
     const [validatedA, validatedB] = [validateMostPlayedHandResponse(aplayed), validateMostPlayedHandResponse(bplayed)];
 
     if (validatedA && validatedB) {
-      console.log(validatedA, validatedB);
       const rockA = validatedA.find((el) => el._id === 'ROCK');
       const rockB = validatedB.find((el) => el._id === 'ROCK');
       const scissorsA = validatedA.find((el) => el._id === 'SCISSORS');
@@ -260,7 +259,7 @@ const getMostPlayedHand = async (player: string) => {
       const rock = rockA && rockB ? rockA.count + rockB.count : 0;
       const scissors = scissorsA && scissorsB ? scissorsA.count + scissorsB.count : 0;
       const paper = paperA && paperB ? paperA.count + paperB.count : 0;
-      console.log(rock, scissors, paper);
+      
       if (rock > scissors && rock > paper) return Played.Rock;
       else if (scissors > rock && scissors > paper) return Played.Scissors;
       else return Played.Paper;

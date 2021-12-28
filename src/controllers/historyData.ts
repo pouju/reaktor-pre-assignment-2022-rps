@@ -20,8 +20,6 @@ historyDataRouter.get('/', (req, res) => {
   const player = req.query.player;
   const pageNumber = Number(req.query.page);
 
-  console.log(req.query);
-
   if (isString(player) && !isNaN(pageNumber)) {
     const decodedPlayer = decodeURIComponent(player);
 

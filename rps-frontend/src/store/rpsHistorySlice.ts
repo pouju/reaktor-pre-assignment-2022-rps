@@ -31,7 +31,6 @@ export const updateHistoryAsync = createAsyncThunk(
       const validatedCount = isNaN(count) ? undefined : count;
       
       if ((!validatedCount || !validated) && playerName !== '') {
-        console.log(validatedCount, validated);
         thunkApi.dispatch(updateError(`no data available for player: ${playerName}`));
       }
       return { history: validated, numOfPages: validatedCount };
