@@ -47,7 +47,7 @@ const PlayerSummary = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Win Ratio</TableCell>
-                  <TableCell>Games Playd</TableCell>
+                  <TableCell>Games Played</TableCell>
                   <TableCell>Most Played Hand</TableCell>
                 </TableRow>
               </TableHead>
