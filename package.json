@@ -1,0 +1,20 @@
+{
+  "name": "rps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "cd rps-backend && npm install && npm run tsc && cd ../rps-frontend && npm install && npm run build",
+    "start": "cd rps-backend && node build/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pouju/reaktor-pre-assignment-2022-rps.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pouju/reaktor-pre-assignment-2022-rps/issues"
+  },
+  "homepage": "https://github.com/pouju/reaktor-pre-assignment-2022-rps#readme"
+}

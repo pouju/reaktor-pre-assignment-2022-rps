@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  postgres:
+    container_name: rps-db-prod
+    image: postgres
+    env_file:
+      - rps-backend/.env
+    volumes:
+      - rps-data-prod:/var/lib/postgresql/data/
+      - ./rps-backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5432:5432
+  app:
+    container_name: rps-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - rps-backend/.env
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+  
+volumes:
+  rps-data-prod:

@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS cursors (
   cursor varchar(255) NOT NULL,
   PRIMARY KEY (cursor)
-)
+);
 
 CREATE TABLE IF NOT EXISTS gameresults (
   gameid varchar(255) NOT NULL,
@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS gameresults (
   playerbname varchar(255) NOT NULL,
   playerbplayed varchar(255) NOT NULL,
   PRIMARY KEY (gameid)
-)
+);
