@@ -25,7 +25,7 @@ app.use(express_1.default.json());
  * Keep BadApi and DB in synch by getting new game results frequently (on every ten minute)
  */
 let lock = false;
-setInterval(() => {
+const syncJob = () => {
     if (!lock) {
         lock = true;
         console.log('syncing data');
@@ -44,12 +44,14 @@ setInterval(() => {
     }
     // ping heroku app to keep it awake
     try {
-        http_1.default.get('http://rps-results.herokuapp.com');
+        http_1.default.get('http://rps-results.herokuapp.com/ping');
     }
     catch (e) {
         console.log('Pinging application failed', e);
     }
-}, 600000);
+};
+syncJob(); // run also immediately when app is started
+setInterval(syncJob, 600000);
 app.get('/ping', (_req, res) => {
     res.send('This is RPS result api!');
 });

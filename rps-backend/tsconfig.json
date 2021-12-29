@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES6",
-    "outDir": "./build/",
+    "outDir": "../build/",
     "module": "commonjs",
     "strict": true,
     "noUnusedLocals": true,
@@ -12,8 +12,5 @@
   },
   "include": [
     "src"
-  ],
-  "exclude": [
-    "rps-frontend", "client"
   ]
 }
