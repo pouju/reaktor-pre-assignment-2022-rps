@@ -24,7 +24,13 @@ const client = new w3cwebsocket(webSocketAddress);
 client.onopen = () => {
   console.log('websocket open');
 }
-
+/**
+ * 
+ * Component for showing live results from Bad Api
+ * Creates two sliders where upper one shows currently ongoing games
+ * and lower one shows last ten results
+ * Sliders are automatically moved so data can be presented nicely
+ */
 const RpsLive = () => {
   const classes = useStyles();
   const noSlides = 10;
@@ -55,7 +61,6 @@ const RpsLive = () => {
             setGameResults(oldGameResults.concat(validated));
           }
         }
-        
       }
     }
   }

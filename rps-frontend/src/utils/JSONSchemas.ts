@@ -1,5 +1,7 @@
 import { JSONSchemaType } from 'ajv';
-import { GameBegin, GameResult, Page, Played, Player, PlayerSummaryData } from '../types';
+import { GameBegin, GameResult, Played, Player, PlayerSummaryData } from '../types';
+
+// JSON Schemas for validating with Ajv
 
 export const playedSchema: JSONSchemaType<Player> = {
   type: 'object',
@@ -27,21 +29,6 @@ export const gameResultSchema: JSONSchemaType<GameResult> = {
     playerB: playedSchema
   },
   required: ['type', 'gameId', 't', 'playerA', 'playerB'],
-  additionalProperties: false
-}
-
-export const pageResponseSchema: JSONSchemaType<Page> = {
-  type: 'object',
-  properties: {
-    cursor: { 
-      type: 'string',
-      nullable: true },
-    data: {
-      type: 'array',
-      items: gameResultSchema
-    }
-  },
-  required: ['data'],
   additionalProperties: false
 }
 

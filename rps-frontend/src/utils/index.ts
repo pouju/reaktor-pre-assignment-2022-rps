@@ -4,24 +4,18 @@ import {
   gameBeginSchema,
   gameResultArraySchema,
   gameResultSchema,
-  pageResponseSchema,
   playerSummarySchema
 } from './JSONSchemas';
 
 const ajv = new Ajv();
 
-const validatePage = ajv.compile(pageResponseSchema);
-
-export const validatePageResponse = (page: unknown) => {
-  if (validatePage(page)) {
-    return page;
-  }
-  console.log(validatePage.errors)
-  return undefined;
-}
-
 const validateGameResultArray = ajv.compile(gameResultArraySchema);
 
+/**
+ * Validates game result history data
+ * @param history unkown data array wanna be `GameResult`- array
+ * @returns `GameResult[]` if `history` was valid and undefined in case of validation error
+ */
 export const validateHistoryResponse = (history: unknown) => {
   if (validateGameResultArray(history)) {
     return history;
@@ -33,6 +27,11 @@ export const validateHistoryResponse = (history: unknown) => {
 const validateGameResult = ajv.compile(gameResultSchema);
 const validateGameBegin = ajv.compile(gameBeginSchema);
 
+/**
+ * Validates websocket responses received from Bad Api
+ * @param data unknown data wanna be `GameResult` or `GameBegin`
+ * @returns returns `GameResult` or `GameBegin` object or undefined in case of validation error
+ */
 export const validateWsResponse = (data: unknown) => {
   if (validateGameResult(data) || validateGameBegin(data)) {
     return data;
@@ -44,6 +43,11 @@ export const validateWsResponse = (data: unknown) => {
 
 const validatePlayerSummary = ajv.compile(playerSummarySchema);
 
+/**
+ * Validates summary response get from backend
+ * @param data unknown data wanna be `PlayerSummaryData`
+ * @returns `PlayerSummaryData` object if validation succeed or undefined if validation failed
+ */
 export const validateSummaryResponse = (data: unknown) => {
   if (validatePlayerSummary(data)) {
     return data;
@@ -52,6 +56,12 @@ export const validateSummaryResponse = (data: unknown) => {
   return undefined;
 }
 
+/**
+ * 
+ * @param playerA `Player`- object of player A
+ * @param playerB `Player`- object of player B
+ * @returns Returns the winner `Player`- object, i.e. A or B. In case of draw game returns undefined
+ */
 export const getWinner = (playerA: Player, playerB: Player): Player | undefined => {
   const aPlayed = playerA.played;
   const bPlayed = playerB.played;
@@ -81,4 +91,3 @@ export const getWinner = (playerA: Player, playerB: Player): Player | undefined 
 
   return undefined;
 }
-

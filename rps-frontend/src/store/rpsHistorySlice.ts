@@ -6,10 +6,10 @@ import { validateHistoryResponse } from '../utils';
 import { updateError } from './notificationSlice';
 
 export interface RpsHistoryState {
-  playerSearched: string,
-  numberOfPages: number,
-  history: GameResult[],
-  status: 'idle' | 'loading' | 'failed'
+  playerSearched: string, // current player whose history data is asked
+  numberOfPages: number, // number of data history data pages `playerSearched` has
+  history: GameResult[], // history data results of player `playerSearched`
+  status: 'idle' | 'loading' | 'failed' // currently used only for showing loading status
 }
 
 const initialState: RpsHistoryState = {
@@ -19,6 +19,14 @@ const initialState: RpsHistoryState = {
   status: 'idle',
 }
 
+/**
+ * Async thunk to perform history data fetches
+ * Also gets number of pages for asked player to keep that upto date
+ * If data validation fails or some other error like connetion error uccures, error message is set
+ * @params `{ playerName, pageNum }`- object where `playerName` is the name of player whose data is fetched
+ * and `pageNum` is the number of page where data is fetched
+ * 
+ */
 export const updateHistoryAsync = createAsyncThunk(
   'rpsHistory/fetchHistory',
   async ({ playerName, pageNum }: { playerName: string, pageNum: number}, thunkApi) => {

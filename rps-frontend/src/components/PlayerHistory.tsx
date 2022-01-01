@@ -25,6 +25,12 @@ const useStyles = makeStyles(() => ({
   }
 }));
 
+/**
+ * 
+ * Wraps player history related stuff
+ * Uses async redux thunk to get required history data
+ * and creates the history data table and controls table pagination
+ */
 const PlayerHistory = () => {
   const classes = useStyles();
   const dispatch = useAppDispatch();
@@ -46,7 +52,6 @@ const PlayerHistory = () => {
     });
     setPageNumber(page - 1);
     dispatch(updateHistoryAsync({ playerName, pageNum: page - 1 }));
-    
   }
 
   const createPagination = () => (

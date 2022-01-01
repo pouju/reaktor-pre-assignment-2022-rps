@@ -42,7 +42,7 @@ You can also start backend and frontend separately and run only Postgres with Do
 
 1. Set up `.env`- file as told [earlier](#running-locally). But now change also value of `POSTGRES_HOST` to `localhost`.
 2. cd to `rps-backend` and run `docker-compose -f docker-compose.dev.yml up db` to start postgres database. This will also init your database utilizing [init.sql](./rps-backend/init.sql)- file.
-3. Start another bash and cd to `rps-backen` and run `npm install` and after that `npm run dev` to start express backend in development mode. Backend is runinng on `localhost:3001`.
+3. Start another bash and cd to `rps-backend` and run `npm install` and after that `npm run dev` to start express backend in development mode. Backend is runinng on `localhost:3001`.
 4. Start another bash and cd to `rps-frontend` and rub `npm install` and run `npm start` to start frontend.
 5. Access application in `localhost:3000`
 

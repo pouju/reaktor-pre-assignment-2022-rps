@@ -4,6 +4,11 @@ import { GameResult } from '../types';
 import { getWinner } from '../utils';
 import { getPlayedEmoji, trophy } from '../utils/emojis';
 
+/**
+ * Forms one card component wrapping one game result.
+ * Used by RpsLive component.
+ * @param  `GameResult` object
+ */
 const WsGameResult = ({ playerA, playerB, t }: GameResult) => {
   const winner = getWinner(playerA, playerB);
   const date = new Date(t);

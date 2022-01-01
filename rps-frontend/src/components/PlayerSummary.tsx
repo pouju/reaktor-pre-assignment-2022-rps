@@ -15,6 +15,10 @@ const useStyles = makeStyles(({
   }
 }))
 
+/**
+ * Fetches currently selected player's summary data and creates a simple table to show this data
+ * Used by PlayerHistory component
+ */
 const PlayerSummary = () => {
   const classes = useStyles();
   const selectedPlayer = useAppSelector(selectPlayerSearched);

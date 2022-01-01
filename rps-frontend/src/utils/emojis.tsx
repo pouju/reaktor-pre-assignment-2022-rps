@@ -7,6 +7,11 @@ export const paper = <>&#9995;</>;
 export const trophy = <>&#127942;</>
 export const question = <>&#8265;</>
 
+/**
+ * 
+ * @param played hand played
+ * @returns emoji JSX representing the hand played
+ */
 export const getPlayedEmoji = (played: Played) => {
   if (played === Played.Paper) return paper;
   if (played === Played.Scissors) return scissors;

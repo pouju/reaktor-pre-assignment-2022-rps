@@ -8,6 +8,11 @@ import { updateError } from '../store/notificationSlice';
 
 type Anchor = 'left' | 'right'
 
+/**
+ * Fetches all playernames from backend and creates a simple drawer i.e. side panel where user can select player
+ * whose history data they would like to see
+ * @param param0 Anchor specifies if drawer / sidepanel is on left or rigth: possible values: `left` | `right`
+ */
 const PlayerDrawer = ({ anchor }: { anchor: Anchor }) => {
   const dispatch = useAppDispatch();
   const selectedPlayer = useAppSelector(selectPlayerSearched)

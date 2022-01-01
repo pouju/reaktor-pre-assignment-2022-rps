@@ -73,6 +73,10 @@ const formTimeCell = (gameResult: GameResult) => {
   return date.toLocaleString();
 }
 
+/**
+ * Creates a table containing player's history data
+ * @param `GameResult[]` i.e. fraction of player's history data
+ */
 const GameResultTable = ({ gameResults }: { gameResults: GameResult[] }) => {
   const classes = useStyles();
 

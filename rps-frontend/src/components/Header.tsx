@@ -12,6 +12,9 @@ const useStyles = makeStyles(() => ({
   }
 }));
 
+/**
+ * Simple header component wrapping menus etc.
+ */
 const Header = () => {
   const classes = useStyles();
 
