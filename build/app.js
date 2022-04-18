@@ -7,8 +7,8 @@ const config_1 = __importDefault(require("./utils/config"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
-const http_1 = __importDefault(require("http"));
-const historyDataService_1 = require("./services/historyDataService");
+// import http from 'http';
+// import { syncBadApiAndDb } from './services/historyDataService';
 const historyData_1 = __importDefault(require("./controllers/historyData"));
 const app = (0, express_1.default)();
 mongoose_1.default.connect(config_1.default.MONGO_URI)
@@ -24,34 +24,36 @@ app.use(express_1.default.json());
 /**
  * Keep BadApi and DB in synch by getting new game results frequently (on every ten minute)
  */
-let lock = false;
+// disabled 18.4.2022
+/* let lock = false;
 const syncJob = () => {
-    if (!lock) {
-        lock = true;
-        console.log('syncing data');
-        (0, historyDataService_1.syncBadApiAndDb)()
-            .then((result) => {
-            console.log(result);
-            lock = false;
-        })
-            .catch((e) => {
-            console.log(e);
-            lock = false;
-        });
-    }
-    else {
-        console.log('lock is set');
-    }
-    // ping heroku app to keep it awake
-    try {
-        http_1.default.get('http://rps-results.herokuapp.com/ping');
-    }
-    catch (e) {
-        console.log('Pinging application failed', e);
-    }
-};
+  if (!lock) {
+    lock = true;
+    console.log('syncing data');
+    syncBadApiAndDb()
+      .then((result) => {
+        console.log(result);
+        lock = false;
+      })
+      .catch((e) => {
+        console.log(e);
+        lock = false;
+      });
+  }
+  else {
+    console.log('lock is set');
+  }
+
+  // ping heroku app to keep it awake
+  try {
+    http.get('http://rps-results.herokuapp.com/ping');
+  } catch (e) {
+    console.log('Pinging application failed', e);
+  }
+}
+ 
 syncJob(); // run also immediately when app is started
-setInterval(syncJob, 600000);
+setInterval(syncJob, 600000); */
 app.get('/ping', (_req, res) => {
     res.send('This is RPS result api!');
 });

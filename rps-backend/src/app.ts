@@ -2,8 +2,8 @@ import config from './utils/config';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import http from 'http';
-import { syncBadApiAndDb } from './services/historyDataService';
+// import http from 'http';
+// import { syncBadApiAndDb } from './services/historyDataService';
 import historyDataRouter from './controllers/historyData';
 
 const app = express();
@@ -23,7 +23,9 @@ app.use(express.json());
 /**
  * Keep BadApi and DB in synch by getting new game results frequently (on every ten minute)
  */
-let lock = false;
+
+// disabled 18.4.2022
+/* let lock = false;
 const syncJob = () => {
   if (!lock) {
     lock = true;
@@ -51,7 +53,7 @@ const syncJob = () => {
 }
  
 syncJob(); // run also immediately when app is started
-setInterval(syncJob, 600000);
+setInterval(syncJob, 600000); */
 
 
 app.get('/ping', (_req, res) => {
